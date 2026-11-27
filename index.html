@@ -197,6 +197,7 @@
   .tthead { color: var(--dim); font-size: 12px; padding: 0 2px 8px; border-bottom: 1px solid var(--line); }
   .ttrow { padding: 8px 2px; border-bottom: 1px solid var(--line); }
   .ttrow:last-child { border-bottom: 0; }
+  .trow.q { grid-template-columns: 22px minmax(0, 1.5fr) minmax(0, 1fr) 72px; }
   .ttrow .nm { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ttrow .nm small { color: var(--faint); font-weight: 500; margin-right: 5px; }
   .ttrow .sub { color: var(--dim); font-size: 11px; margin-top: 1px; }
@@ -295,6 +296,7 @@
     <nav class="nav" id="nav">
       <a href="#/" data-nav="home">Home</a>
       <a href="#/events" data-nav="events">Events</a>
+      <a href="#/series" data-nav="series">Series</a>
       <a href="#/leagues" data-nav="leagues">Leagues</a>
     </nav>
   </div>
@@ -328,6 +330,8 @@ function route() {
   if (parts[0] === "l" && parts[1]) return { page: "league", name: parts[1], tab: slugToTab(parts[2]) };
   if (parts[0] === "events") return { page: "events" };
   if (parts[0] === "leagues") return { page: "leagues" };
+  if (parts[0] === "s" && parts[1]) return { page: "seriesOne", name: parts[1] };
+  if (parts[0] === "series") return { page: "series" };
   return { page: "home" };
 }
 function slugToTab(slug) {
@@ -335,6 +339,7 @@ function slugToTab(slug) {
   return "standings";
 }
 const eventLink = (name, t) => "#/e/" + encodeURIComponent(name) + (t ? "/" + TAB_SLUGS[t][0] : "");
+const seriesLink = name => "#/s/" + encodeURIComponent(name);
 const leagueLink = (name, t) => "#/l/" + encodeURIComponent(name) + (t ? "/" + TAB_SLUGS[t][1] : "");
 
 const $ = id => document.getElementById(id);
@@ -409,7 +414,8 @@ async function refresh() {
 function render() {
   const r = route();
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
-    a.dataset.nav === r.page || (a.dataset.nav === "events" && r.page === "event") || (a.dataset.nav === "leagues" && r.page === "league")));
+    a.dataset.nav === r.page || (a.dataset.nav === "events" && r.page === "event") || (a.dataset.nav === "leagues" && r.page === "league")
+    || (a.dataset.nav === "series" && r.page === "seriesOne")));
   const detail = r.page === "event" || r.page === "league";
   $("meet").style.display = $("spot").style.display = document.querySelector(".tabs").style.display = detail ? "" : "none";
   $("crumb").innerHTML = "";
@@ -419,6 +425,8 @@ function render() {
     if (r.page === "home") renderHome();
     if (r.page === "events") renderEventList();
     if (r.page === "leagues") renderLeagueList();
+    if (r.page === "series") renderSeriesList();
+    if (r.page === "seriesOne") renderSeries(r.name);
     return;
   }
   tab = r.tab;
@@ -490,6 +498,8 @@ function renderHome() {
   const finished = comps.filter(c => c.state === "finished");
   let html = `<div class="hero"><h1>MLZ <span>Speedway</span> Live</h1><p>Live heats, standings, leagues and stats from the MLZ test server.</p></div>`;
   if (live.length) html += `<div class="section-title">Live now</div><div class="tiles">${live.map(eventCard).join("")}</div>`;
+  const series = data.series || [];
+  if (series.length) html += `<div class="section-title">Series <a href="#/series">All series</a></div><div class="tiles">${series.map(seriesCard).join("")}</div>`;
   html += `<div class="section-title">Leagues <a href="#/leagues">All leagues</a></div>`
     + (leagues.length ? `<div class="tiles">${leagues.map(leagueCard).join("")}</div>`
       : `<div class="card empty">No leagues yet. In game: <b>/league create ekstraliga</b></div>`);
@@ -511,6 +521,48 @@ function renderEventList() {
   }
   if (!data.competitions.length) html += `<div class="card empty">No events yet.</div>`;
   $("view").innerHTML = html;
+}
+
+function seriesCard(s) {
+  const done = s.rounds.filter(r => r.finished).length;
+  return `<a class="tile-card" href="${seriesLink(s.name)}">
+      <div class="tt"><span class="tn">🏁 ${esc(s.name)}</span><span class="chip finished">${done}/${s.rounds.length} rounds</span></div>
+      <div class="ts">Individual championship · top ${s.qualifyTop} qualify for next season</div>
+      ${s.standings.length ? `<table class="mini">${s.standings.slice(0, 4).map(r => `<tr><td>${r.place}</td><td>${esc(r.name)}</td><td>${r.total}</td></tr>`).join("")}</table>` : ""}
+    </a>`;
+}
+
+function renderSeriesList() {
+  const list = data.series || [];
+  $("view").innerHTML = `<div class="hero"><h1>Series</h1><p>Individual championships over several rounds, like MLŻ SGP.</p></div>` + (list.length
+    ? `<div class="tiles">${list.map(seriesCard).join("")}</div>`
+    : `<div class="card empty">No series yet. In game: <b>/series create sgp</b>, then <b>/series round new &lt;event&gt; &lt;track&gt;</b>.</div>`);
+}
+
+function renderSeries(name) {
+  const s = (data.series || []).find(x => x.name === name);
+  document.body.dataset.theme = "sgp";
+  $("crumb").innerHTML = `<a href="#/series">Series</a> › ${esc(name)}`;
+  if (!s) { $("view").innerHTML = `<div class="card empty">There's no series called "${esc(name)}".</div>`; return; }
+  const done = s.rounds.filter(r => r.finished).length;
+  const head = s.rounds.map((r, i) => `<th title="${esc(r.label)}">R${i + 1}</th>`).join("");
+  const rows = s.standings.map(r => `<tr class="${r.qualified ? "pa" : ""}"><td class="pos">${r.place}</td><td>${esc(r.name)}</td>
+      ${r.perRound.map(x => `<td style="color:${x == null ? "var(--faint)" : "var(--text)"}">${x == null ? "–" : x}</td>`).join("")}
+      <td>${r.wins || ""}</td><td class="pts">${r.total}</td></tr>`).join("");
+  const running = new Set(data.competitions.filter(c => c.state === "running").map(c => c.name));
+  $("view").innerHTML = `<div class="meet"><div class="tile">🏁</div><div class="body"><h1 class="meet-name">${esc(s.name)}</h1>
+      <div class="meet-meta"><span><b>${done}/${s.rounds.length}</b> rounds</span><span>Top <b>${s.qualifyTop}</b> qualify for next season</span></div></div></div>
+    <div class="card">${tagbar("Standings", `${done}/${s.rounds.length}`)}
+      ${s.standings.length ? `<div class="xscroll"><table class="ltable"><tr><th></th><th>Rider</th>${head}<th>Wins</th><th>Pts</th></tr>${rows}</table></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Qualified for next season (top ${s.qualifyTop})</span><span>20 · 18 · 16 · 14 · 12 · 11 · 10 … 1 per round</span></div>`
+        : `<div class="empty">No rounds finished yet.</div>`}
+    </div>
+    <div class="card">${tagbar("Rounds")}
+      ${s.rounds.length ? s.rounds.map((r, i) => `<a class="row-link" href="${eventLink(r.event)}"><span class="n">${esc(r.label)} <span class="k">${esc(r.event)}</span></span>
+        <span class="k">${r.finished ? "🏆 " + esc(r.winner || "") : ""}</span>
+        ${r.finished ? `<span class="chip finished">Finished</span>` : running.has(r.event) ? `<span class="chip running">● Live</span>` : `<span class="chip setup">Upcoming</span>`}</a>`).join("")
+        : `<div class="empty">No rounds yet.</div>`}
+    </div>`;
 }
 
 function renderLeagueList() {
@@ -594,7 +646,19 @@ function teamCard(c, side) {
     <div class="tthead"><span>Rider</span><span>Heats</span><span class="r">Pts</span><span class="r">B</span></div>${body}</div>`;
 }
 
+function qualifyingCard(c) {
+  if (!c.qualifying || !c.qualifying.length) return "";
+  const turn = c.qualifying.find(q => q.timeMs != null && !q.picked);
+  return `<div class="card">${tagbar("Qualifying", "fastest lap")}
+    ${c.qualifying.map((q, i) => `<div class="trow q"><span class="pl">${i + 1}</span>
+      <div class="nm">${esc(q.name)}</div>
+      <span class="heats" style="color:var(--dim)">${q.picked ? "picked #" + q.number : q === turn ? "<span style='color:var(--accent)'>◀ picking now</span>" : ""}</span>
+      <span class="pts" style="font-size:16px">${q.timeMs == null ? "–" : (q.timeMs / 1000).toFixed(3)}</span></div>`).join("")}
+    <div class="legend"><span>Up to 3 riders at a time, fastest lap counts. Fastest picks their number first.</span></div></div>`;
+}
+
 function renderStandings(c) {
+  if (c.state === "setup" && c.qualifying && c.qualifying.length) { $("view").innerHTML = qualifyingCard(c); return; }
   if (c.type === "team" && c.team) {
     const done = c.program.filter(h => h.result).length;
     $("view").innerHTML = `<div class="card">
@@ -606,6 +670,7 @@ function renderStandings(c) {
   }
   const n = c.standings.length;
   if (!n) { $("view").innerHTML = `<div class="card empty">No riders yet.</div>`; return; }
+  const quali = qualifyingCard(c);
   const zones = c.state !== "setup";
   const done = c.program.filter(h => h.result && h.stage === "qualifying").length;
   const half = n > 8 ? Math.ceil(n / 2) : n;
@@ -618,7 +683,7 @@ function renderStandings(c) {
       <div class="titlerow">${tagbar("Standings", `${done}/${c.program.filter(h => h.stage === "qualifying").length}`)}<span class="right">avg = points per ride</span></div>
       <div class="cols ${right ? "two" : ""}">${statTable(left)}${right ? statTable(right) : ""}</div>
       <div class="legend">${zoneKey}${Object.entries(CODES).map(([k, v]) => `<span><b>${k}</b>${v}</span>`).join("")}</div>
-    </div>`;
+    </div>` + quali;
 }
 
 function heatCard(c, h) {
