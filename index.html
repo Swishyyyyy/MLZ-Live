@@ -266,7 +266,10 @@
 </div>
 
 <!-- Only on the free hosted site: config.js says where the live data is. On the Minecraft server it's simply missing. -->
-<script src="config.js"></script>
+<script>
+  // Load config.js fresh every time, so phones never keep an old or broken copy.
+  document.write('<script src="config.js?t=' + Date.now() + '"><\/script>');
+</script>
 <script>
 let data = { competitions: [] };
 let chosen = null;
