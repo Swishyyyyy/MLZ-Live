@@ -1,0 +1,45 @@
+# MLZBoatLag
+# Boat lag stays exactly like vanilla: hit a boat and you get snapped back.
+# The only change: high ping riders don't get snapped back FURTHER.
+#
+# Why: the snap-back is about speed x ping. At 30 blocks/s a 40 ping rider
+# gets snapped ~1.2 blocks, a 150 ping rider ~4.5 blocks for the same hit.
+# This plugin makes the high ping rider's snap the same size as the reference
+# ping rider's. Riders at or under the reference ping are never touched.
+#
+# Testing tip: set enabled: false, /boatlag reload, and you have pure vanilla to compare.
+# After editing, run /boatlag reload in game.
+
+enabled: true
+
+# Everyone's snap-back is matched to what a rider with this ping would get.
+# Riders at or below this ping get plain vanilla.
+# 50 = a good connection to the server. Lower it to make snaps smaller for everyone
+# above it; raise it if high ping riders now feel like they barely get snapped.
+reference-ping-millis: 50
+
+# Pings above this are treated as this, so a lag spike can't move someone miles.
+max-ping-millis: 300
+
+# The snap is never shortened by more than this many blocks.
+max-shift-blocks: 6.0
+
+# The new snap-back spot always stays at least this far from the other boat
+# (center to center). Boats are 1.375 wide, so 1.45 = just clear of it.
+# This stops the server hitting you into the same boat again on your next move.
+clearance-blocks: 1.45
+
+# Corrections bigger than this are real teleports (warps, /tp) and left alone.
+teleport-threshold-blocks: 12.0
+
+# How close another boat has to be for a correction to count as boat lag.
+# Corrections when no boat is nearby (hitting a wall) are left alone.
+contact-radius-blocks: 3.0
+
+# How long after being near another boat we still treat corrections as boat lag.
+# Must be longer than your worst rider's ping round trip. 1000 = 1 second.
+contact-memory-millis: 1000
+
+# Worlds where this is active. Leave as [] for every world.
+# Example: worlds: [speedway, world]
+worlds: []

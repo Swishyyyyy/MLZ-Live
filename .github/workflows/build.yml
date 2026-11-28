@@ -1,0 +1,32 @@
+name: Build plugins
+on:
+  push:
+    branches: [plugin-build]
+    paths-ignore: ['jars/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build MLZBoatLag (compile + tests)
+        working-directory: MLZBoatLag
+        run: gradle build --no-daemon
+      - name: Save the jar to the branch
+        run: |
+          mkdir -p jars
+          cp MLZBoatLag/build/libs/*.jar jars/
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          git add jars
+          git commit -m "Built jar" || echo "nothing new"
+          git push

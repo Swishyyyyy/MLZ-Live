@@ -1,0 +1,17 @@
+name: MLZBoatLag
+version: '${version}'
+main: com.mlz.boatlag.MLZBoatLag
+api-version: '1.21'
+description: "Vanilla boat lag, with the snap-back evened out so high ping isn't punished harder."
+depend: [ProtocolLib]
+
+commands:
+  boatlag:
+    description: "Reload the config or show the snap-back readout."
+    usage: /boatlag <reload|debug>
+    permission: mlzboatlag.admin
+
+permissions:
+  mlzboatlag.admin:
+    description: Use /boatlag
+    default: op

@@ -1,0 +1,22 @@
+{
+  // This file tells GitHub Codespaces how to set up the coding environment.
+  // When you open the repo in Codespaces it installs Java 21 + Gradle and the
+  // Java extensions for VS Code, then creates the Gradle wrapper (./gradlew).
+  "name": "MLZBoatLag (Java 21 + Gradle)",
+  "image": "mcr.microsoft.com/devcontainers/java:1-21",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "installGradle": "true"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle"
+      ]
+    }
+  },
+  "postCreateCommand": "gradle wrapper --gradle-version 8.11.1"
+}
